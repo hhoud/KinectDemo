@@ -1,0 +1,64 @@
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  SIGSEGV (0xb) at pc=0x02cb237a, pid=5400, tid=3079519088
+#
+# JRE version: 7.0-b147
+# Java VM: Java HotSpot(TM) Server VM (21.0-b17 mixed mode linux-x86 )
+# Problematic frame:
+# C  [libXnVFeatures_1_5_2.so+0x20637a]  NACommonData::Update()+0x1a
+#
+# Failed to write core dump. Core dumps have been disabled. To enable core dumping, try "ulimit -c unlimited" before starting Java again
+#
+# If you would like to submit a bug report, please visit:
+#   http://bugreport.sun.com/bugreport/crash.jsp
+# The crash happened outside the Java Virtual Machine in native code.
+# See problematic frame for where to report the bug.
+#
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x0851c400):  JavaThread "main" [_thread_in_native, id=5403, stack(0xb788b000,0xb78dc000)]
+
+siginfo:si_signo=SIGSEGV: si_errno=0, si_code=1 (SEGV_MAPERR), si_addr=0x00000000
+
+Registers:
+EAX=0x00000000, EBX=0x02eb5ff4, ECX=0xb78da9a8, EDX=0x00000000
+ESP=0xb78da960, EBP=0xb78da9e8, ESI=0x02ebb7a0, EDI=0xb78dacbc
+EIP=0x02cb237a, EFLAGS=0x00010202, CR2=0x00000000
+
+Top of Stack: (sp=0xb78da960)
+0xb78da960:   00000000 b78da9a8 00000006 0096e0a0
+0xb78da970:   00adc199 00b02ff4 b78da9c8 00adc28a
+0xb78da980:   b78da9a8 00f1bff4 b78da9e8 00000007
+0xb78da990:   b78da9dc 00932298 4f314c51 2fdf15d7
+0xb78da9a0:   00000000 90907b00 4f314cc4 3285edbf
+0xb78da9b0:   00955920 909322a8 b78da9e8 00b02ff4
+0xb78da9c0:   8c302008 b78dacbc b78da9e8 00adc334
+0xb78da9d0:   4f314c51 02a6d7e8 00000001 02eb5ff4 
+
+Instructions: (pc=0x02cb237a)
+0x02cb235a:   8d b6 00 00 00 00 55 89 e5 57 56 53 83 ec 7c 8b
+0x02cb236a:   75 08 e8 b6 52 e1 ff 81 c3 83 3c 20 00 8b 46 18
+0x02cb237a:   8b 00 89 04 24 e8 18 4e e1 ff 39 86 6c aa 00 00
+0x02cb238a:   0f 84 32 03 00 00 89 86 6c aa 00 00 8d 46 70 89 
+
+Register to memory mapping:
+
+EAX=0x00000000 is an unknown value
+EBX=0x02eb5ff4: <offset 0x409ff4> in /usr/lib/libXnVFeatures_1_5_2.so at 0x02aac000
+ECX=0xb78da9a8 is pointing into the stack for thread: 0x0851c400
+EDX=0x00000000 is an unknown value
+ESP=0xb78da960 is pointing into the stack for thread: 0x0851c400
+EBP=0xb78da9e8 is pointing into the stack for thread: 0x0851c400
+ESI=0x02ebb7a0: <offset 0x40f7a0> in /usr/lib/libXnVFeatures_1_5_2.so at 0x02aac000
+EDI=0xb78dacbc is pointing into the stack for thread: 0x0851c400
+
+
+Stack: [0xb788b000,0xb78dc000],  sp=0xb78da960,  free space=318k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+C  [libXnVFeatures_1_5_2.so+0x20637a]  NACommonData::Update()+0x1a
+C  [libXnVFeatures_1_5_2.so+0x66ab6]  SceneAnalyzer::Update(std::vector<Vector2D<int>, std::allocator<Vector2D<int> > > const*, unsigned int)+0x46
+C  [libXnVFeatures_1_5_2.so+0x2cce6]  XnVSceneAnalyzer::UpdateData()+0x376
+C  [libXnVFeatures_1_5_2.so+0x270f7]  __ModuleUpdateData(void*)+0x47
+C  [libOpenNI.so+0x3561f]

@@ -21,17 +21,19 @@
 ****************************************************************************/
 package kinectdemo;
 
-import com.googlecode.javacv.FrameGrabber;
-import com.googlecode.javacv.OpenCVFrameGrabber;
-import com.googlecode.javacv.VideoInputFrameGrabber;
-import com.googlecode.javacv.cpp.opencv_core.IplImage;
+import com.googlecode.javacv.CanvasFrame;
+import static com.googlecode.javacv.cpp.opencv_core.*;
 import static com.googlecode.javacv.cpp.opencv_highgui.*;
+import static com.googlecode.javacv.cpp.opencv_imgproc.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.OpenNI.*;
 
 import java.nio.ShortBuffer;
 import java.awt.*;
 import java.awt.color.ColorSpace;
 import java.awt.image.*;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 
 public class UserTracker extends Component
@@ -127,6 +129,7 @@ public class UserTracker extends Component
     private Context context;
     private DepthGenerator depthGen;
     private UserGenerator userGen;
+    private ImageGenerator imgGen;
     private SkeletonCapability skeletonCap;
     private PoseDetectionCapability poseDetectionCap;
     private byte[] imgbytes;
@@ -152,8 +155,10 @@ public class UserTracker extends Component
             scriptNode = new OutArg<ScriptNode>();
             context = Context.createFromXmlFile(SAMPLE_XML_FILE, scriptNode);
 
-            depthGen = DepthGenerator.create(context);            
+            depthGen = DepthGenerator.create(context);
+            imgGen = ImageGenerator.create(context);
             DepthMetaData depthMD = depthGen.getMetaData();
+            ImageMetaData imgMD = imgGen.getMetaData();
 
             histogram = new float[10000];
             width = depthMD.getFullXRes();
@@ -410,20 +415,42 @@ public class UserTracker extends Component
             g.drawRect(left-10, top-10, right-left+10, bottom-top+10);
         }
     }
-    
+    CanvasFrame canvas = new CanvasFrame("Test");
     public void paint(Graphics g)
     {
     	if (drawPixels)
     	{
-            DataBufferByte dataBuffer = new DataBufferByte(imgbytes, width*height*3);
+            try {
+                /*DataBufferByte dataBuffer = new DataBufferByte(imgbytes, width*height*3);
 
-            WritableRaster raster = Raster.createInterleavedRaster(dataBuffer, width, height, width * 3, 3, new int[]{0, 1, 2}, null); 
+                WritableRaster raster = Raster.createInterleavedRaster(dataBuffer, width, height, width * 3, 3, new int[]{0, 1, 2}, null); 
 
-            ColorModel colorModel = new ComponentColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), new int[]{8, 8, 8}, false, false, ComponentColorModel.OPAQUE, DataBuffer.TYPE_BYTE);
+                ColorModel colorModel = new ComponentColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), new int[]{8, 8, 8}, false, false, ComponentColorModel.OPAQUE, DataBuffer.TYPE_BYTE);
 
-            bimg = new BufferedImage(colorModel, raster, false, null);
+                bimg = new BufferedImage(colorModel, raster, false, null);
 
-    		g.drawImage(bimg, 0, 0, null);
+                g.drawImage(bimg, 0, 0, null);*/
+                
+                
+                //GET RGB IMAGE
+                // create image
+                IplImage iplRgbImage = IplImage.create(640, 480, IPL_DEPTH_8U, 3);
+                IplImage iplBgrImage = IplImage.create(640, 480, IPL_DEPTH_8U, 3);
+                // fill image
+                ImageMap imageMap = imgGen.getImageMap();
+                ByteBuffer byteBuffer = iplRgbImage.getByteBuffer();
+                long ptr = imageMap.getNativePtr();
+                NativeAccess.copyToBuffer(byteBuffer, ptr, 640*480*3);
+                //Convert image color
+                cvCvtColor(iplRgbImage, iplBgrImage, CV_RGB2BGR);
+                //Save and show image
+                cvSaveImage("test_capture.jpg", iplBgrImage);
+                canvas.showImage(iplBgrImage);
+                byteBuffer.rewind();
+                
+            } catch (GeneralException ex) {
+                Logger.getLogger(UserTracker.class.getName()).log(Level.SEVERE, null, ex);
+            }
     	}
         try
 		{
