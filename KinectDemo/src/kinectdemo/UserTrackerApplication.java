@@ -35,25 +35,31 @@ public class UserTrackerApplication {
 	 */
 	public UserTracker viewer;
 	private boolean shouldRun = true;
+        private boolean lastState = true;
+        private boolean rgb = true;
 	private JFrame frame;
 
     public UserTrackerApplication (JFrame frame)
     {
     	this.frame = frame;
     	frame.addKeyListener(new KeyListener()
-		{
-			@Override
-			public void keyTyped(KeyEvent arg0) {}
-			@Override
-			public void keyReleased(KeyEvent arg0) {}
-			@Override
-			public void keyPressed(KeyEvent arg0) {
-				if (arg0.getKeyCode() == KeyEvent.VK_ESCAPE)
-				{
-					shouldRun = false;
-				}
-			}
-		});
+        {
+            @Override
+            public void keyTyped(KeyEvent arg0) {}
+            @Override
+            public void keyReleased(KeyEvent arg0) {}
+            @Override
+            public void keyPressed(KeyEvent arg0) {
+                if (arg0.getKeyCode() == KeyEvent.VK_ESCAPE)
+                {
+                    shouldRun = false;
+                }else if(arg0.getKeyCode() == KeyEvent.VK_I){
+                    rgb = false;
+                }else if(arg0.getKeyCode() == KeyEvent.VK_R){
+                    rgb = true;
+                }
+            }
+        });
     }
 
     public static void main(String s[])
@@ -74,7 +80,12 @@ public class UserTrackerApplication {
     void run()
     {
         while(shouldRun) {
+            /*if(lastState != rgb){
+                viewer.setRGB(rgb);
+                lastState = rgb;
+            }*/
             viewer.updateDepth();
+            viewer.updateIRImage();
             viewer.repaint();
         }
         frame.dispose();
