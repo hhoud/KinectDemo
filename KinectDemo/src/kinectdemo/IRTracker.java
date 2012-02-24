@@ -21,24 +21,29 @@ import org.OpenNI.IRMetaData;
 import org.OpenNI.MapOutputMode;
 import org.OpenNI.OutArg;
 import org.OpenNI.ScriptNode;
+import org.OpenNI.StatusException;
 
 /**
  *
  * @author hh354
  */
-public class IRTracker{
+public class IRTracker implements Runnable{
     
-    /*private OutArg<ScriptNode> scriptNode;
+    private OutArg<ScriptNode> scriptNode;
     private Context context;
     private final String SAMPLE_XML_FILE = "/home/hh354/kinect/OpenNI/Samples/Config/SamplesConfig.xml";
     private IRGenerator irGen;
     private static final int MIN_8_BIT = 0;
     private static final int MAX_8_BIT = 255;
     private BufferedImage irImg;
-    private CanvasFrame canvas = new CanvasFrame("Test");
+    private int imgWidth, imgHeight;
+    private boolean isRunning = true;
     
     public IRTracker()
     {
+    }
+    
+    private void configOpenNI(){
         try {
             scriptNode = new OutArg<ScriptNode>();
             context = Context.createFromXmlFile(SAMPLE_XML_FILE, scriptNode);
@@ -49,15 +54,40 @@ public class IRTracker{
             imgWidth = irMD.getFullXRes();
             imgHeight = irMD.getFullYRes();
             context.setGlobalMirror(true);
-            
-            width = irMD.getFullXRes();
-            height = irMD.getFullYRes();
-            
             context.startGeneratingAll();
         } catch (GeneralException ex) {
             Logger.getLogger(IRTracker.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+    
+     public void run()
+    {
+        isRunning = true;
+        configOpenNI();
+        while (isRunning) {
+            try {
+                context.waitAnyUpdateAll();
+                //context.waitOneUpdateAll(imageGen);
+                // wait for 'one' ('any' is safer)
+            }
+            catch(StatusException e)
+            { 
+                System.out.println(e);
+                System.exit(1);
+            }
+            //long startTime = System.currentTimeMillis();
+            updateIRImage();
+            //imageCount++;
+            //totalTime += (System.currentTimeMillis() - startTime);
+        }
+        // close down
+        try {
+            context.stopGeneratingAll();
+        }
+        catch (StatusException e) {}
+        context.release();
+        System.exit(1);
+    } // end of run()
     
     private BufferedImage createGrayIm(ShortBuffer irSB, int minIR, int maxIR)
     {
@@ -106,8 +136,13 @@ public class IRTracker{
         }
     }
     
-    public void paint(Graphics g)
-    {
-        canvas.showImage(new IplImage().createFrom(irImg));
-    }*/
+    public BufferedImage getImage(){
+        return this.irImg;
+    }
+    public boolean getIsRunning(){
+        return this.isRunning;
+    }
+    public void setIsRunning(boolean running){
+        this.isRunning = running;
+    }
 }

@@ -35,8 +35,8 @@ public class UserTrackerApplication {
 	 */
 	public UserTracker viewer;
 	private boolean shouldRun = true;
-        private boolean lastState = true;
-        private boolean rgb = true;
+        private boolean lastState = false;
+        private boolean rgb = false;
 	private JFrame frame;
 
     public UserTrackerApplication (JFrame frame)
@@ -80,12 +80,11 @@ public class UserTrackerApplication {
     void run()
     {
         while(shouldRun) {
-            /*if(lastState != rgb){
+            if(lastState != rgb){
                 viewer.setRGB(rgb);
                 lastState = rgb;
-            }*/
+            }
             viewer.updateDepth();
-            viewer.updateIRImage();
             viewer.repaint();
         }
         frame.dispose();

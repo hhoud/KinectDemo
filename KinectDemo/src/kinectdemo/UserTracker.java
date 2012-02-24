@@ -154,9 +154,13 @@ public class UserTracker extends Component
     private BufferedImage irimg;
     private IplImage iplRgbImage;
     int width, height, left, top, right, bottom, imgWidth, imgHeight;
-    private boolean rgb = true;
+    private boolean rgb = false;
     private final String SAMPLE_XML_FILE = "/home/hh354/kinect/OpenNI/Samples/Config/SamplesConfig.xml";
     private MapOutputMode mapMode;
+    
+    Thread t;
+    private RGBTracker rgbT;
+    private IRTracker irT;
     
     public UserTracker()
     {
@@ -167,8 +171,10 @@ public class UserTracker extends Component
             depthGen = DepthGenerator.create(context);
             DepthMetaData depthMD = depthGen.getMetaData();
             mapMode = new MapOutputMode(640, 480, 30);
-            initGenerator();
-
+            irT = new IRTracker();
+            //rgbT = new RGBTracker();
+            setRGB(rgb);
+            
             histogram = new float[10000];
             width = depthMD.getFullXRes();
             height = depthMD.getFullYRes();
@@ -196,30 +202,17 @@ public class UserTracker extends Component
     }
     public void setRGB(boolean value){
         rgb = value;
-        initGenerator();
-    }
-    
-    private void initGenerator(){
-        try {
-            if(rgb){
-                imgGen = ImageGenerator.create(context);
-                imgGen.setMapOutputMode(mapMode);
-                imgGen.setPixelFormat(PixelFormat.RGB24);
-                ImageMetaData imgMD = imgGen.getMetaData();
-                imgWidth = imgMD.getFullXRes();
-                imgHeight = imgMD.getFullYRes();
-            }else{
-                irGen = IRGenerator.create(context);
-                irGen.setMapOutputMode(mapMode);
-                IRMetaData irMD = irGen.getMetaData();
-                imgWidth = irMD.getFullXRes();
-                imgHeight = irMD.getFullYRes();
-            }
-            context.setGlobalMirror(true);
-            
-        } catch (GeneralException ex) {
-                Logger.getLogger(UserTracker.class.getName()).log(Level.SEVERE, null, ex);
-            }
+        if(rgb){
+            if(irT!= null && irT.getIsRunning())
+                irT.setIsRunning(false);
+            t = new Thread(rgbT);
+            t.start();
+        }else{
+            if(rgbT!= null && rgbT.getIsRunning())
+                rgbT.setIsRunning(false);
+            t = new Thread(irT);
+            t.start();
+        }
     }
     
     private void calcHist(ShortBuffer depth)
@@ -252,55 +245,6 @@ public class UserTracker extends Component
             {
                 histogram[i] = 1.0f - (histogram[i] / (float)points);
             }
-        }
-    }
-
-    private BufferedImage createGrayIm(ShortBuffer irSB, int minIR, int maxIR)
-    {
-        // create a grayscale image
-        BufferedImage image = new BufferedImage(imgWidth, imgHeight, BufferedImage.TYPE_BYTE_GRAY);
-        // access the image's data buffer
-        byte[] data = ((DataBufferByte)image.getRaster().getDataBuffer()).getData();
-        float displayRatio = (float)(MAX_8_BIT - MIN_8_BIT)/(maxIR - minIR);
-        // scale the converted IR data over the grayscale range;
-        int i = 0;
-        while (irSB.remaining() > 0) {
-            int irVal = irSB.get();
-            int out;
-            if (irVal <= minIR)
-                out = MIN_8_BIT;
-            else if (irVal >= maxIR)
-                out = MAX_8_BIT;
-            else
-                out = (int) ((irVal - minIR)* displayRatio);
-            data[i++] = (byte) out;
-            // store in the data buffer
-        }
-        return image;
-    } 
-
-    void updateIRImage()
-    {
-        if(!rgb){
-            try {
-                ShortBuffer irSB = irGen.getIRMap().createShortBuffer();
-                // scan the IR data, storing the min and max values
-                int minIR = irSB.get();
-                int maxIR = minIR;
-                while (irSB.remaining() > 0) {
-                    int irVal = irSB.get();
-                    if (irVal > maxIR)
-                        maxIR = irVal;
-                    if (irVal < minIR)
-                        minIR = irVal;
-                }
-                irSB.rewind();
-                // convert the IR values into 8-bit grayscales
-                irimg = createGrayIm(irSB, minIR, maxIR);
-            }
-            catch(GeneralException e)
-            { 
-                System.out.println(e); }
         }
     }
     
@@ -470,7 +414,6 @@ public class UserTracker extends Component
             //Save ROI
             Date date= new Date();
             cvSaveImage("faces/face_user_"+user+"_"+date.getTime()+".jpg", iplCrop);
-            System.out.println("Saved Face");
         } catch (IOException ex) {
             Logger.getLogger(UserTracker.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -568,102 +511,76 @@ public class UserTracker extends Component
             cropImage((top+10), (left-10), (right-left+20), (bottom-top+40), user);
         }
     }
+    
     CanvasFrame canvas = new CanvasFrame("Test");
     //CanvasFrame canvas2 = new CanvasFrame("Test gamma");
     public void paint(Graphics g)
     {
     	if (drawPixels)
-    	{
-            try {
-                DataBufferByte dataBuffer = new DataBufferByte(imgbytes, width*height*3);
-                WritableRaster raster = Raster.createInterleavedRaster(dataBuffer, width, height, width * 3, 3, new int[]{0, 1, 2}, null); 
-                ColorModel colorModel = new ComponentColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), new int[]{8, 8, 8}, false, false, ComponentColorModel.OPAQUE, DataBuffer.TYPE_BYTE);
-                bimg = new BufferedImage(colorModel, raster, false, null);
+    	{//Draw depth image
+            DataBufferByte dataBuffer = new DataBufferByte(imgbytes, width*height*3);
+            WritableRaster raster = Raster.createInterleavedRaster(dataBuffer, width, height, width * 3, 3, new int[]{0, 1, 2}, null); 
+            ColorModel colorModel = new ComponentColorModel(ColorSpace.getInstance(ColorSpace.CS_sRGB), new int[]{8, 8, 8}, false, false, ComponentColorModel.OPAQUE, DataBuffer.TYPE_BYTE);
+            bimg = new BufferedImage(colorModel, raster, false, null);
 
-                g.drawImage(bimg, 0, 0, null);
-                
-                if(rgb)
-                {
-                    /**
-                     * GET RGB IMAGE
-                     */
-                    // create image
-                    IplImage iplBgrImage = IplImage.create(imgWidth, imgHeight, IPL_DEPTH_8U, 3);
-                    iplRgbImage = IplImage.create(imgWidth, imgHeight, IPL_DEPTH_8U, 3);
-
-                    // fill image
-                    ImageMap imageMap = imgGen.getImageMap();
-                    ByteBuffer byteBuffer = iplBgrImage.getByteBuffer();
-                    long ptr = imageMap.getNativePtr();
-                    NativeAccess.copyToBuffer(byteBuffer, ptr, imgWidth*imgHeight*3);
-
-                    //Convert image color from rgb to bgr
-                    cvCvtColor(iplBgrImage, iplRgbImage, CV_RGB2BGR);
-
-                    // Show image
-                    //canvas.showImage(iplRgbImage);
-
-                    canvas.showImage(iplRgbImage);
-                    byteBuffer.rewind();
-                }else{
-                    try {
-                        canvas.showImage(new IplImage().createFrom(irimg));
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-                
-            } catch (GeneralException ex) {
-                Logger.getLogger(UserTracker.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            g.drawImage(bimg, 0, 0, null);
     	}
+        try{
+            if(rgb){
+                canvas.showImage(rgbT.getImage());
+            }else{
+                canvas.showImage(new IplImage().createFrom(irT.getImage()));
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
         try
-		{
-			int[] users = userGen.getUsers();
-			for (int i = 0; i < users.length; ++i)
-			{
-		    	Color c = colors[users[i]%colors.length];
-		    	c = new Color(255-c.getRed(), 255-c.getGreen(), 255-c.getBlue());
+        {
+            int[] users = userGen.getUsers();
+            for (int i = 0; i < users.length; ++i)
+            {
+            Color c = colors[users[i]%colors.length];
+            c = new Color(255-c.getRed(), 255-c.getGreen(), 255-c.getBlue());
 
-		    	g.setColor(c);
-				if (drawSkeleton && skeletonCap.isSkeletonTracking(users[i]))
-				{
-					drawSkeleton(g, users[i]);
-                                        trackHead(g,users[i]);
-                                        //trackUser(g,users[i]);
-				}
-				printID=false;
-				if (printID)
-				{
-					Point3D com = depthGen.convertRealWorldToProjective(userGen.getUserCoM(users[i]));
-					String label = null;
-					if (!printState)
-					{
-						label = new String(""+users[i]);
-					}
-					else if (skeletonCap.isSkeletonTracking(users[i]))
-					{
-						// Tracking
-						label = new String(users[i] + " - Tracking");
-					}
-					else if (skeletonCap.isSkeletonCalibrating(users[i]))
-					{
-						// Calibrating
-						label = new String(users[i] + " - Calibrating");
-					}
-					else
-					{
-						// Nothing
-						label = new String(users[i] + " - Looking for pose (" + calibPose + ")");
-					}
+            g.setColor(c);
+                if (drawSkeleton && skeletonCap.isSkeletonTracking(users[i]))
+                {
+                    drawSkeleton(g, users[i]);
+                    //trackHead(g,users[i]);
+                    //trackUser(g,users[i]);
+                }
+                printID=false;
+                if (printID)
+                {
+                    Point3D com = depthGen.convertRealWorldToProjective(userGen.getUserCoM(users[i]));
+                    String label = null;
+                    if (!printState)
+                    {
+                            label = new String(""+users[i]);
+                    }
+                    else if (skeletonCap.isSkeletonTracking(users[i]))
+                    {
+                            // Tracking
+                            label = new String(users[i] + " - Tracking");
+                    }
+                    else if (skeletonCap.isSkeletonCalibrating(users[i]))
+                    {
+                            // Calibrating
+                            label = new String(users[i] + " - Calibrating");
+                    }
+                    else
+                    {
+                            // Nothing
+                            label = new String(users[i] + " - Looking for pose (" + calibPose + ")");
+                    }
 
-					g.drawString(label, (int)com.getX(), (int)com.getY());
-				}
-			}
-		} catch (StatusException e)
-		{
-			e.printStackTrace();
-		}
+                    g.drawString(label, (int)com.getX(), (int)com.getY());
+                }
+            }
+        } catch (StatusException e)
+        {
+            e.printStackTrace();
+        }
     }
 }
 
